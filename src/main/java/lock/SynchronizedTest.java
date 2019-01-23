@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
  * 资料：
  * Java的对象头和对象组成详解 https://blog.csdn.net/lkforce/article/details/81128115#1%EF%BC%8CMark%20Word
  */
-public class LockTest {
+public class SynchronizedTest {
 
     public void synMethod1(String name, Object o, int i) throws InterruptedException {
         System.out.println(Thread.currentThread().getName() + "尝试获取" + name);
@@ -220,13 +220,13 @@ public class LockTest {
     使用JVisualVM可以检测到死锁，线程Dump如下
 "pool-1-thread-2" #12 prio=5 os_prio=0 tid=0x0000000020096800 nid=0x1b68 waiting for monitor entry [0x000000002137e000]
    java.lang.Thread.State: BLOCKED (on object monitor)
-	at lock.LockTest.deadLockMethod(LockTest.java:41)
+	at lock.SynchronizedTest.deadLockMethod(SynchronizedTest.java:41)
 	- waiting to lock <0x00000007566a7da8> (a java.lang.Object)
 	- locked <0x00000007566a7db8> (a java.lang.Object)
 
 "pool-1-thread-1" #11 prio=5 os_prio=0 tid=0x0000000020b20800 nid=0x323c waiting for monitor entry [0x000000002127e000]
    java.lang.Thread.State: BLOCKED (on object monitor)
-	at lock.LockTest.deadLockMethod(LockTest.java:41)
+	at lock.SynchronizedTest.deadLockMethod(SynchronizedTest.java:41)
 	- waiting to lock <0x00000007566a7db8> (a java.lang.Object)
 	- locked <0x00000007566a7da8> (a java.lang.Object)
      */
@@ -260,11 +260,4 @@ public class LockTest {
         countDownLatch.await();
         System.out.println("执行完毕");
     }
-
-
-    //5、ReentrantLock的condition，ReentrantReadWriteLock的使用
-
-
-    //6、    AtomicReference的对象CAS原子操作
-
 }
