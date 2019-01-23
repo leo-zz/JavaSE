@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
  */
 public class LockTest {
 
-    private void synMethod1(String name, Object o, int i) throws InterruptedException {
+    public void synMethod1(String name, Object o, int i) throws InterruptedException {
         System.out.println(Thread.currentThread().getName() + "尝试获取" + name);
         System.out.println("加锁前lock的hash: " + o.hashCode());
         synchronized (o) {
@@ -25,9 +25,26 @@ public class LockTest {
 
     }
 
-    private synchronized void synMethod2(String name, int i) throws InterruptedException {
+    public synchronized void synMethod2(String name, int i) throws InterruptedException {
         System.out.println(Thread.currentThread().getName() + "  " + System.currentTimeMillis() + "第一次拿到对象锁" + name);
         Thread.sleep(i);
+    }
+
+    public void deadLockMethod(String name1,String name2,Object o1, Object o2, int i1,int i2) throws InterruptedException {
+        System.out.println(Thread.currentThread().getName() + "尝试获取锁:"+name1);
+        synchronized (o1) {
+            Thread.sleep(10);
+            System.out.println(Thread.currentThread().getName() + "  " + System.currentTimeMillis() + "第一次拿到对象锁" + name1);
+            Thread.sleep(i1);
+            System.out.println(Thread.currentThread().getName() + "尝试获取锁:"+name2);
+            synchronized (o2) {
+                Thread.sleep(10);
+                System.out.println(Thread.currentThread().getName() + "  " + System.currentTimeMillis() + "第一次拿到对象锁" + name2);
+                Thread.sleep(i2);
+            }
+            System.out.println(Thread.currentThread().getName() + "  " + System.currentTimeMillis() + "释放对象锁" + name2);
+        }
+        System.out.println(Thread.currentThread().getName() + "  " + System.currentTimeMillis() + "释放对象锁" + name1);
     }
 
     //1、测试synchronized的代码如何使用，
@@ -48,6 +65,7 @@ public class LockTest {
      * pool-1-thread-2  1548204054899释放对象锁lock
      * 执行完毕
      */
+
 
     @Test
     public void testSyn() throws InterruptedException {
@@ -92,6 +110,7 @@ public class LockTest {
      * pool-1-thread-2  1548203138511释放对象锁thislock
      * 执行完毕
      */
+
     @Test
     public void testMultiSynAcquireOneObject() throws InterruptedException {
         Object lock = new Object();
@@ -138,6 +157,7 @@ public class LockTest {
 
     //4、synchronized 给String 字面量上锁（字符串缓冲池的特点）,其他基本类型也是如此。
     //  使用时避免确保锁的粒度尽可能细，避免无畏的争抢。
+
     /**
      * 两个String引用实际上指向字符串缓冲池中同一个对象。
      * 结果：
@@ -147,6 +167,7 @@ public class LockTest {
      * 1548152963274第一次拿到对象锁lock2
      * 执行完毕
      */
+
     @Test
     public void testStringLock() throws InterruptedException {
 //        String lock1 = "abcdefg";
@@ -180,7 +201,65 @@ public class LockTest {
         System.out.println("执行完毕");
     }
     //5 使用javap -c classFile 查看字节码，
+    // 注意private的方法 看不到字节码
+    /*
+        修饰代码段可以看到：monitorenter与monitorexit
+        修饰方法，字节码中看不到相关信息
+     */
 
+    //6、synchronized的死锁
+    /*
+    结果：
+    pool-1-thread-1尝试获取锁:lock1
+    pool-1-thread-1  1548211849436第一次拿到对象锁lock1
+    pool-1-thread-2尝试获取锁:lock2
+    pool-1-thread-2  1548211849533第一次拿到对象锁lock2
+    pool-1-thread-1尝试获取锁:lock2
+    pool-1-thread-2尝试获取锁:lock1
+
+    使用JVisualVM可以检测到死锁，线程Dump如下
+"pool-1-thread-2" #12 prio=5 os_prio=0 tid=0x0000000020096800 nid=0x1b68 waiting for monitor entry [0x000000002137e000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at lock.LockTest.deadLockMethod(LockTest.java:41)
+	- waiting to lock <0x00000007566a7da8> (a java.lang.Object)
+	- locked <0x00000007566a7db8> (a java.lang.Object)
+
+"pool-1-thread-1" #11 prio=5 os_prio=0 tid=0x0000000020b20800 nid=0x323c waiting for monitor entry [0x000000002127e000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at lock.LockTest.deadLockMethod(LockTest.java:41)
+	- waiting to lock <0x00000007566a7db8> (a java.lang.Object)
+	- locked <0x00000007566a7da8> (a java.lang.Object)
+     */
+    @Test
+    public void testDeadLock() throws InterruptedException {
+        Object lock1 = new Object();
+        Object lock2 = new Object();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch countDownLatch = new CountDownLatch(2);
+
+        executorService.execute(() -> {
+            try {
+                Thread.sleep(100);
+                deadLockMethod("lock1","lock2", lock1, lock2,  1000,100);
+                countDownLatch.countDown();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        executorService.execute(() -> {
+            try {
+                Thread.sleep(200);
+                deadLockMethod("lock2","lock1", lock2, lock1,1000,100);
+                countDownLatch.countDown();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        countDownLatch.await();
+        System.out.println("执行完毕");
+    }
 
 
     //5、ReentrantLock的condition，ReentrantReadWriteLock的使用
