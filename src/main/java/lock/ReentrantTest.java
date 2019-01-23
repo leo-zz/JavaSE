@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 /**
  * ReentrantLock的高级特性：等待可中断、公平锁、多条件绑定实现选择性通知
  */
@@ -70,7 +71,40 @@ public class ReentrantTest {
         }
     }
 
-    //1、ReentrantLock的等待可中断
+    //1、ReentrantLock的使用习惯，建议跟try-finally连用，确保锁能够关闭，避免引起死锁。
+    /*
+     结果：
+        lock1未释放
+        lock2已释放
+     */
+    @Test
+    public void lockUseTest() throws InterruptedException {
+        ReentrantLock lock1 = new ReentrantLock();
+        ReentrantLock lock2 = new ReentrantLock();
+
+        Thread t1 = new Thread(() -> {
+            lock1.lock();
+            int a = 3 / 0;
+            lock1.unlock();
+        }, "t1");
+
+        Thread t2 = new Thread(() -> {
+            try {
+                lock2.lock();
+                int a = 3 / 0;
+            } finally {
+                lock2.unlock();
+            }
+        }, "t2");
+        t1.start();
+        t2.start();
+        Thread.sleep(3000);
+
+        System.out.println(lock1.isLocked() ? "lock1未释放" : "lock1已释放");
+        System.out.println(lock2.isLocked() ? "lock2未释放" : "lock2已释放");
+    }
+
+    //2、ReentrantLock的等待可中断
     /*
         使用ReentrantLock模拟死锁并演示中断。
         deadLockTest1()不会触发中断，会导致死锁。
@@ -126,12 +160,9 @@ public class ReentrantTest {
     }
 
 
-    //2、ReentrantLock的公平锁
+    //3、ReentrantLock的公平锁
     //  由于受CPU的特性线程的调度没有绝对的先后顺序，使用sleep尽量让线程排好队。
-
-    /**
-     * 在并发度不是特别高的时候，非公平锁的不公平性很难体现：
-     */
+    // 结果：在并发度不是特别高的时候，非公平锁的不公平性很难体现：
     @Test
     public void fairLockTest() throws InterruptedException {
         int count = 100;
@@ -189,12 +220,14 @@ public class ReentrantTest {
         fairLatch.await();
         System.out.println("执行完毕");
     }
+    //4、ReentrantLock的多条件绑定
+    @Test
+    public void testMultiCondition(){
+
+    }
+
+    //5、 ReentrantReadWriteLock的使用
 
 
-    //3、ReentrantLock的多条件绑定
 
-    //8、 ReentrantReadWriteLock的使用
-
-
-    //9、 AtomicReference的对象CAS原子操作
 }
