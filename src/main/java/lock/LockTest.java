@@ -179,7 +179,7 @@ public class LockTest {
         countDownLatch.await();
         System.out.println("执行完毕");
     }
-    //5 使用javap -c  查看字节码
+    //5 使用javap -c classFile 查看字节码，
 
 
 

@@ -119,6 +119,11 @@ public class MemTest extends ClassLoader {
         }
     }
 
+    /**
+     * 问题：
+     Maven打包时报错jdk.internal.org.objectweb.asm找不到，但是JDK1.8的rt.jar中确实有此包。
+     在Maven中配置bootclasspath解决该问题
+     */
     //Metadata 的调优： https://blog.csdn.net/bolg_hero/article/details/78189621
     //测试9: 动态加载类 来撑爆metaspace
     //结论： [Metaspace: 1266964K->1266964K(1593344K)]
