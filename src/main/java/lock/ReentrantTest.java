@@ -3,7 +3,6 @@ package lock;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Condition;
@@ -222,6 +221,18 @@ public class ReentrantTest {
         System.out.println("***********************************");
 
         //公平锁
+        //原理：由内部类FairSync调用AQS实现      FairSync是AbstractQueuedSynchronizer的子类，实现了具体的代码。
+        /*
+        a.尝试获取独占锁
+        1.0、获取AQS的state(表示线程获取锁的次数，可重入，volatile)
+        2.0、如果state为0，判断等待队列中是否存在早于当前线程请求锁的线程（公平性的体现）
+        2.1、若不存在，使用CAS将state改为1，并将锁的线程指向当前线程。其中，CAS由Unsafe类中的本地代码实现
+        2.2、若存在，锁获取失败，跳转至b。
+        3.0、如果state不为0，则获取持有该锁的线程，判断与当前线程是否相等。
+        3.1、若相等，则更新state，如果重入次数太多造成int型的state溢出，则抛异常。
+        b.锁获取失败，加入到队列中
+
+         */
         fairService.execute(() -> {
             reentrantLockTest(fair, "公平锁", 3000);
             fairLatch.countDown();
