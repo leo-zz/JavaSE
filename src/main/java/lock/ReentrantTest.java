@@ -5,6 +5,8 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -44,6 +46,24 @@ public class ReentrantTest {
         } finally {
             lock1.unlock();
             System.out.println(Thread.currentThread().getName() + " " + System.currentTimeMillis() + " 释放锁:" + name1);
+        }
+    }
+
+    private void testCondition(Lock lock, CountDownLatch countDownLatch, Condition c1,String lname, String cname) {
+        System.out.println(Thread.currentThread().getName()+"开始执行");
+        try {
+            System.out.println(Thread.currentThread().getName()+"加锁"+lname);
+
+            lock.lock();
+            System.out.println(Thread.currentThread().getName()+"等待"+cname);
+            countDownLatch.countDown();
+            c1.await();
+            System.out.println(Thread.currentThread().getName()+"被"+cname+"唤醒并拿到锁"+lname);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+            System.out.println(Thread.currentThread().getName()+"释放锁"+lname);
         }
     }
 
@@ -221,10 +241,79 @@ public class ReentrantTest {
         System.out.println("执行完毕");
     }
     //4、ReentrantLock的多条件绑定
+    /*
+        t1绑定c1
+        t2绑定c2
+        t3绑定c1
+      执行结果：
+        t1开始执行
+        t1加锁lock1
+        t1等待c1
+        t2开始执行
+        t2加锁lock1
+        t2等待c2
+        t3开始执行
+        t3加锁lock1
+        t3等待c1
+        三个线程都处于等待状态
+        加锁后唤醒t2
+        唤醒t1与t3
+        解锁，执行完毕
+        #############################
+        t2被c2唤醒并拿到锁lock1
+        t2释放锁lock1
+        t1被c1唤醒并拿到锁lock1
+        t1释放锁lock1
+        t3被c1唤醒并拿到锁lock1
+        t3释放锁lock1
+     */
     @Test
-    public void testMultiCondition(){
+    public void testMultiCondition() throws InterruptedException {
+        ReentrantLock lock = new ReentrantLock();
+        CountDownLatch countDownLatch = new CountDownLatch(3);
+
+        /**
+         *  使用condition的await/signal()时与object的wait/notify()的异同
+         *  condition要在持有对应lock锁的代码块中调用，否则抛异常。      object要在Synchronized语句块中使用
+         *  调用condition的await()方法时会释放该线程使用的锁,signal()后线程会重新请求锁。   与object一致
+         *  condition的await()时可以被中断
+         *  线程的signal()顺序是FIFO的，也就是说先等待的先唤醒。
+         */
+        Condition c1 = lock.newCondition();
+        Condition c2 = lock.newCondition();
+
+        new Thread(()->{
+            testCondition(lock,countDownLatch, c1, "lock1","c1");
+        },"t1").start();
+
+        new Thread(()->{
+            testCondition(lock,countDownLatch, c2, "lock1","c2");
+        },"t2").start();
+
+        new Thread(()->{
+            testCondition(lock,countDownLatch, c1, "lock1","c1");
+        },"t3").start();
+
+        countDownLatch.await();
+        System.out.println("三个线程都处于等待状态");
+
+        try {
+            lock.lock();
+            Thread.sleep(1000);
+            System.out.println("加锁后唤醒t2");
+            c2.signalAll();
+            Thread.sleep(1000);
+            c1.signalAll();
+            System.out.println("唤醒t1与t3");
+            System.out.println("解锁，执行完毕");
+            System.out.println("#############################");
+        }finally {
+            lock.unlock();
+        }
 
     }
+
+
 
     //5、 ReentrantReadWriteLock的使用
 
