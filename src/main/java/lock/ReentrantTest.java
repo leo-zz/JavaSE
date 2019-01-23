@@ -3,11 +3,13 @@ package lock;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 /**
@@ -49,21 +51,21 @@ public class ReentrantTest {
         }
     }
 
-    private void testCondition(Lock lock, CountDownLatch countDownLatch, Condition c1,String lname, String cname) {
-        System.out.println(Thread.currentThread().getName()+"开始执行");
+    private void testCondition(Lock lock, CountDownLatch countDownLatch, Condition c1, String lname, String cname) {
+        System.out.println(Thread.currentThread().getName() + "开始执行");
         try {
-            System.out.println(Thread.currentThread().getName()+"加锁"+lname);
+            System.out.println(Thread.currentThread().getName() + "加锁" + lname);
 
             lock.lock();
-            System.out.println(Thread.currentThread().getName()+"等待"+cname);
+            System.out.println(Thread.currentThread().getName() + "等待" + cname);
             countDownLatch.countDown();
             c1.await();
-            System.out.println(Thread.currentThread().getName()+"被"+cname+"唤醒并拿到锁"+lname);
+            System.out.println(Thread.currentThread().getName() + "被" + cname + "唤醒并拿到锁" + lname);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             lock.unlock();
-            System.out.println(Thread.currentThread().getName()+"释放锁"+lname);
+            System.out.println(Thread.currentThread().getName() + "释放锁" + lname);
         }
     }
 
@@ -228,7 +230,7 @@ public class ReentrantTest {
             final int j = i;
             fairService.execute(() -> {
                 try {
-                    Thread.sleep(j * 1);
+                    Thread.sleep(j);
                     System.out.println(Thread.currentThread().getName() + " " + System.currentTimeMillis() + " 开始排队等公平锁：");
                     reentrantLockTest(fair, "公平锁", 10);
                     fairLatch.countDown();
@@ -240,6 +242,7 @@ public class ReentrantTest {
         fairLatch.await();
         System.out.println("执行完毕");
     }
+
     //4、ReentrantLock的多条件绑定
     /*
         t1绑定c1
@@ -282,17 +285,16 @@ public class ReentrantTest {
         Condition c1 = lock.newCondition();
         Condition c2 = lock.newCondition();
 
-        new Thread(()->{
-            testCondition(lock,countDownLatch, c1, "lock1","c1");
-        },"t1").start();
+        //Statement lambda can be replaced with expression lambda
+        new Thread(() ->
+                testCondition(lock, countDownLatch, c1, "lock1", "c1"), "t1").start();
 
-        new Thread(()->{
-            testCondition(lock,countDownLatch, c2, "lock1","c2");
-        },"t2").start();
+        new Thread(() ->
+                testCondition(lock, countDownLatch, c2, "lock1", "c2"), "t2").start();
 
-        new Thread(()->{
-            testCondition(lock,countDownLatch, c1, "lock1","c1");
-        },"t3").start();
+        new Thread(() ->
+                testCondition(lock, countDownLatch, c1, "lock1", "c1")
+                , "t3").start();
 
         countDownLatch.await();
         System.out.println("三个线程都处于等待状态");
@@ -307,16 +309,160 @@ public class ReentrantTest {
             System.out.println("唤醒t1与t3");
             System.out.println("解锁，执行完毕");
             System.out.println("#############################");
-        }finally {
+        } finally {
             lock.unlock();
         }
-
     }
 
 
+    //5、 ReentrantReadWriteLock的使用，
+    // 结论：读锁不是互斥锁,写锁是互斥所。有线程拿到读锁/写锁后，其他线程不能再拿写锁/读锁。
+    /*
+        结果：
+        t1请求写锁 1548235231622
+        t1拿到写锁，开始写入数据 1548235231622
+        t2请求写锁 1548235231623
+        t3请求读锁 1548235231624
+        t4请求读锁 1548235231625
+        t5请求写锁 1548235231625
+        t1释放写锁 1548235233622
+        t2拿到写锁，开始写入数据 1548235233622
+        t2释放写锁 1548235235623
+        t3拿到读锁 1548235235623
+        t4拿到读锁 1548235235623
+        t4读取到的数据：SharedVar{num=2, str='second'}
+        t3读取到的数据：SharedVar{num=2, str='second'}
+        t4释放读锁 1548235237624
+        t3释放读锁 1548235237624
+        t5拿到写锁，开始写入数据 1548235237624
+        t5释放写锁 1548235239624
+        执行完毕 1548235239624
+     */
+    @Test
+    public void testReentrantReadWriteLock() throws InterruptedException {
+        int a = 0;
+        SharedVar sharedVar = new SharedVar();
 
-    //5、 ReentrantReadWriteLock的使用
+        ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+        ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
+        ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
 
+        CountDownLatch countDownLatch = new CountDownLatch(5);
 
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
+        executorService.execute(() -> {
+            try{
+                System.out.println("t1请求写锁 "+System.currentTimeMillis());
+                writeLock.lock();
+                System.out.println("t1拿到写锁，开始写入数据 "+System.currentTimeMillis());
+                sharedVar.setNum(1);
+                sharedVar.setStr("first");
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("t1释放写锁 "+System.currentTimeMillis());
+                writeLock.unlock();
+                countDownLatch.countDown();
+            }
+        });
 
+        executorService.execute(() -> {
+            try{
+                System.out.println("t2请求写锁 "+System.currentTimeMillis());
+                writeLock.lock();
+                System.out.println("t2拿到写锁，开始写入数据 "+System.currentTimeMillis());
+                sharedVar.setNum(2);
+                sharedVar.setStr("second");
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("t2释放写锁 "+System.currentTimeMillis());
+                writeLock.unlock();
+                countDownLatch.countDown();
+            }
+        });
+
+        executorService.execute(() -> {
+            try{
+                System.out.println("t3请求读锁 "+System.currentTimeMillis());
+                readLock.lock();
+                System.out.println("t3拿到读锁 "+System.currentTimeMillis());
+                Thread.sleep(2000);
+                System.out.println("t3读取到的数据："+sharedVar);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("t3释放读锁 "+System.currentTimeMillis());
+                readLock.unlock();
+                countDownLatch.countDown();
+            }
+        });
+
+        executorService.execute(() -> {
+            try{
+                System.out.println("t4请求读锁 "+System.currentTimeMillis());
+                readLock.lock();
+                System.out.println("t4拿到读锁 "+System.currentTimeMillis());
+                Thread.sleep(2000);
+                System.out.println("t4读取到的数据："+sharedVar);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("t4释放读锁 "+System.currentTimeMillis());
+                readLock.unlock();
+                countDownLatch.countDown();
+            }
+        });
+        executorService.execute(() -> {
+            try{
+                System.out.println("t5请求写锁 "+System.currentTimeMillis());
+                writeLock.lock();
+                System.out.println("t5拿到写锁，开始写入数据 "+System.currentTimeMillis());
+                sharedVar.setNum(1);
+                sharedVar.setStr("first");
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                System.out.println("t5释放写锁 "+System.currentTimeMillis());
+                writeLock.unlock();
+                countDownLatch.countDown();
+            }
+        });
+
+        countDownLatch.await();
+        System.out.println("执行完毕 "+System.currentTimeMillis());
+
+    }
+
+    static class SharedVar {
+        int num;
+        String str;
+
+        public int getNum() {
+            return num;
+        }
+
+        public void setNum(int num) {
+            this.num = num;
+        }
+
+        public String getStr() {
+            return str;
+        }
+
+        public void setStr(String str) {
+            this.str = str;
+        }
+
+        @Override
+        public String toString() {
+            return "SharedVar{" +
+                    "num=" + num +
+                    ", str='" + str + '\'' +
+                    '}';
+        }
+    }
 }
