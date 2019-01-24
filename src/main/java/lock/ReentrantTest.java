@@ -246,7 +246,7 @@ public class ReentrantTest {
         1.1、如果是，判断state减一后是否为0；
         1.2、如果为0，则清除 锁的线程信息，并更新state值，并唤醒队列中排第一位的被挂起的线程。
         1.3、如果不为0，锁继续被该线程占有。
-
+        有个比较专业的文章参考：https://blog.csdn.net/luonanqin/article/details/41871909
          */
         fairService.execute(() -> {
             reentrantLockTest(fair, "公平锁", 3000);
