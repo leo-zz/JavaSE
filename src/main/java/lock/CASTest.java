@@ -2,5 +2,8 @@ package lock;
 
 public class CASTest {
 
-    //9、 AtomicReference的对象CAS原子操作
+    //    AtomicStampedReference解决ABA问题
+    //1、 AtomicReference的对象CAS原子操作
+
+
 }
