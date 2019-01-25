@@ -2,6 +2,8 @@ package lock;
 
 import org.junit.Test;
 
+import java.awt.*;
+import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 
 public class ThreadLocalTest {
@@ -55,6 +57,14 @@ public class ThreadLocalTest {
         t2.start();
         countDownLatch.await();
         System.out.println("执行完毕");
+    }
+
+    @Test
+    public void memLeakTest(){
+//        char[] char1 = new char[20 * 1024 * 1024];
+//        char1=null;
+//        System.jvm.gc();
+//        System.out.println("测试垃圾回收");
     }
 
 }

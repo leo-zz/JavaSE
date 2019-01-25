@@ -1,4 +1,4 @@
-package jvm;
+package CollectionTest;
 
 import org.junit.Test;
 

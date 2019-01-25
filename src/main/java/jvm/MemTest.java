@@ -81,8 +81,8 @@ public class MemTest extends ClassLoader {
 //        }
 
         //测试6 最大100MB的堆内存，-Xms100m -Xmx100m -XX:NewSize=60m -XX:MaxNewSize=60m
-        // -XX:SurvivorRatio=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintHeapAtGC
-        // -Xloggc:./log/gc.log
+        // -XX:SurvivorRatio=8 -verbose:jvm.gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintHeapAtGC
+        // -Xloggc:./log/jvm.gc.log
         //此时：eden区 48MB s0 6MB s1 6MB， old区 40MB
         //结果，可以分配54M的空间，不能分配56MB的,疑问，最大空间48MB，如何分配这么大的空间？
         //  PSYoungGen total 55296K
@@ -98,8 +98,8 @@ public class MemTest extends ClassLoader {
 
 
         //测试7 最大100MB的堆内存，-Xms120m -Xmx120m -XX:NewRatio=3
-        // -XX:SurvivorRatio=6 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintHeapAtGC
-        // -Xloggc:./log/gc.log
+        // -XX:SurvivorRatio=6 -verbose:jvm.gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintHeapAtGC
+        // -Xloggc:./log/jvm.gc.log
         //此时：Young:Old=1:3 eden:suvivor=6:2:2  eden 18MB s0 6MB s1 6MB， old区 90MB,总的young区24MB
         //结论：-XX:SurvivorRatio的比例会改变，最低为58:1:1
 
@@ -200,7 +200,7 @@ public class MemTest extends ClassLoader {
     /**
      *
      *
-     C:\Users\Administrator>jstat -gc  2720
+     C:\Users\Administrator>jstat -jvm.gc  2720
      S0C    S1C    S0U    S1U      EC       EU        OC         OU       MC     MU    CCSC   CCSU   YGC     YGCT    FGC    FGCT     GCT
      1536.0 1536.0  0.0    0.0   37888.0   749.0    81920.0    52224.0   5632.0 5246.5 768.0  613.9      17    0.021   8      0.079    0.100
 
