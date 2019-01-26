@@ -88,7 +88,13 @@ public class JUCTest {
         }
     }
 
-    //semaphore的使用
+    //semaphore的使用，信号量。Spring的Hystrix中使用到semaphore实现并发线程数的控制
+    public void semaphoreTest(){
+
+    }
+
+
+
 
     //FutureTask的使用
 

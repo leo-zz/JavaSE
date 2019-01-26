@@ -58,6 +58,7 @@ public class GCTest {
         可以看到char1从eden区直接进入old区，由于char1的大小大于survivor区。YGC后eden区清空。
                 GC原因                  年轻代GC前后的大小                老年代GC前后大小               Java堆GC前后的大小            MetaspaceGC前后大小                    GC耗时
         [Full GC (System.gc()) [PSYoungGen: 1432K->0K(95744K)] [ParOldGen: 40968K->42284K(218624K)] 42400K->42284K(314368K), [Metaspace: 5198K->5198K(1056768K)], 0.0169083 secs] [Times: user=0.01 sys=0.00, real=0.02 secs]
+        其中，[Times: user=0.01 sys=0.00, real=0.02 secs] 提供cpu使用及时间消耗，user是用户模式垃圾收集消耗的cpu时间即用户态cpu时间，sys是消耗系统态cpu时间,real是指垃圾收集器消耗的实际时间。
      */
     @Test
     public void testObjectFinalize() throws InterruptedException {

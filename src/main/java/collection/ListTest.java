@@ -1,4 +1,4 @@
-package CollectionTest;
+package collection;
 
 public class ListTest {
 }
