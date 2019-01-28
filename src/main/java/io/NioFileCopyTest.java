@@ -8,6 +8,10 @@ import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+/**
+ * @Author: leo-zz
+ * @Date: 2019/1/28 21:28
+ */
 public class NioFileCopyTest {
 
     //1、buffer测试
