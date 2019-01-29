@@ -1,5 +1,6 @@
 package io;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -52,10 +53,11 @@ public class SocketTest {
 
             //连续输出10次，测试长连接
             for (int i = 0; i < 10; i++) {
-                byte[] bytes = (content + " count:" + i).getBytes();
+                String reply=content + " count:" + i;
+                byte[] bytes = (reply).getBytes();
                 ops.write(bytes);
                 ops.flush();
-                System.out.println(Thread.currentThread().getName() + "第" + i + "次成功写入数据内容");
+                System.out.println(Thread.currentThread().getName() + "第" + i + "次成功写入数据内容:"+reply);
                 //因此要注意读取前确保流中存在数据，否则会阻塞
                 int count=0;
                 do{

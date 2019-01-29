@@ -1,5 +1,7 @@
 package io;
 
+import util.DynamicByteArray;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -66,27 +68,43 @@ public class NioServer {
 
                         int read = 0;
                         //确保能存储一次读/写的数据
-                        ByteBuffer buffer = ByteBuffer.allocate(1024);
-                        StringBuilder sb = new StringBuilder();
+                        ByteBuffer buffer = ByteBuffer.allocate(10);
+                        DynamicByteArray byteArray = new DynamicByteArray();
+
                         //一个sokcet是长久的连接，但是NIO的机制不同，不能拿到socket阻塞反复通信
-                        if ((read = channel.read(buffer)) == -1) {
+
+
+                        while ((read = channel.read(buffer)) > 0) {
+                            System.out.println(bufferInfo(buffer));
+                            buffer.flip();
+                            System.out.println(bufferInfo(buffer));
+                            //buffer.array() 将整个array数组返回，包括没用到的部分
+                            //字节解码时要注意不要截取片段，否则中文可能会出现乱码。
+                            byteArray.add(buffer.array(), 0, read);
+                            buffer.clear();
+                        }
+                        if (read == -1) {
                             channel.close();//读取到-1,表明连接断开
                             System.out.println("关闭连接");
                             break;//关闭连接后退出此循环
                         }
+                        //接收到的数据存在多余的后缀 “SE c” 4个字节长度
+                        //main  https://github.com/leo-zz/JavaSE count:0SE c
+                        System.out.println("读取到的内容：" + new String(byteArray.getBytes()));
 
-                        System.out.println(bufferInfo(buffer));
-                        buffer.flip();
-                        System.out.println(bufferInfo(buffer));
-                        //buffer.array() 将整个array数组返回，包括没用到的部分
-                        sb.append(new String(buffer.array(), 0, read));
+                        //如果传入的数据长度超过put，则会报错：java.nio.BufferOverflowException
+                        byte[] resBytes = (Thread.currentThread().getName() + "接受成功").getBytes();
+//                        if(buffer.capacity()<resBytes.length){
+                        buffer = ByteBuffer.wrap(resBytes);
+//                        };
+                        //多余的flip会造成数据无法写入
+//                        buffer.flip();
+                        //问题：写入数据长度为0，因为多了一次flip()操作
+                        //读取操作要求limit可写入长度不能为0
+                        int writeNum=channel.write(buffer);
+                        //不会清除旧数据，注意操作时只读取需要的长度，否则会出错。
                         buffer.clear();
-                        System.out.println("读取到的内容：" + sb.toString());
-
-                        buffer.put((Thread.currentThread().getName() + "接受成功").getBytes());
-                        buffer.flip();
-                        channel.write(buffer);
-                        buffer.clear();
+                        byteArray.clear();
                         System.out.println("写入数据成功");
                     }
                     iterator.remove();
