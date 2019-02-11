@@ -2,10 +2,112 @@ package thread;
 
 import org.junit.Test;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadTest {
+
+    //测试线程状态
+    /*
+    线程dump结果：
+        thread2-running 处于运行状态， RUNNABLE
+        thread3-sleep 处于休眠状态，TIMED_WAITING (sleeping)
+        thread4-wait  处于等待状态，WAITING (on object monitor)
+        thread5-ioBlocking 处于运行状态， RUNNABLE
+     JVM Thread中的state与操作系统中线程的状态有出入
+     */
+    @Test
+    public void testThreadState() throws InterruptedException {
+        Thread thread1 = new Thread("thread1-unStart");
+
+
+        Thread thread2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println(Thread.currentThread().getName()+"开始忙等待");
+                while (true) {
+                    int i = 0;
+                    int j=10;
+                    double y=0.0;
+                    j++;
+                    for (; i < 100000000; i++) {
+                        y+=i;
+                    }
+                    y=y/j;
+                }
+            }
+        },"thread2-running");
+
+        Thread thread3 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    int i = 0;
+                    try {
+                        System.out.println(Thread.currentThread().getName()+"开始sleep");
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        },"thread3-sleep");
+
+        final Object o=new Object();
+        Thread thread4 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    synchronized (o){
+                        System.out.println(Thread.currentThread().getName()+"开始等待");
+                        o.wait();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        },"thread4-wait");
+
+        Thread thread5 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ServerSocket serverSocket = new ServerSocket(5140);
+                    System.out.println(Thread.currentThread().getName()+"启动ServerSocket");
+                    Socket accept = serverSocket.accept();
+                    System.out.println(Thread.currentThread().getName()+"接收到Socket请求");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        },"thread5-ioBlocking");
+
+        Thread thread6 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName()+"执行完毕");
+            }
+        },"thread6-dead");
+
+        Thread.sleep(20*1000);//等待10s，用于启动JVisualVM
+        System.out.println("除thread1外启动其他线程");
+        thread2.start();
+        thread3.start();
+        thread4.start();
+        thread5.start();
+        thread6.start();
+
+        Thread.sleep(50*1000);//等待50s，用于观察
+    }
+
 
     //run()和start()方法区别
     /*
